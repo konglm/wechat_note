@@ -1,0 +1,261 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+<meta charset="UTF-8">
+<title>日程管理</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+
+<link href="../../css/weui.min.css" rel="stylesheet">
+<link href="../../css/jquery-weui.css" rel="stylesheet">
+<link href="../../css/demos.css" rel="stylesheet">
+
+<script>
+function countChar(textareaName,spanName)
+{  
+ document.getElementById(spanName).innerHTML = document.getElementById(textareaName).value.length;
+}  
+</script>
+</head>
+<body  ontouchstart>
+	<div class="weui-cells weui-cells_form">
+      	<div class="weui-cell">
+        	<div class="weui-cell__bd">
+          	<textarea class="weui-textarea" id="content" name="content" placeholder="请输入日程内容" rows="3"  onkeydown='countChar("content","counter");' onkeyup='countChar("content","counter");'></textarea>
+          	<div class="weui-textarea-counter"><span id="counter">0</span>/200</div>
+        	</div>
+      	</div>
+    </div>
+	<div class="weui-cells weui-cells_form">
+	
+		<div class="weui-cell">
+	        <div class="weui-cell__hd"><label class="weui-label"><img src="../../image/location.png" style="width: 18px;height:18px">填报地点</label></div>
+	        <div class="weui-cell__bd">
+	          <input id="addr" class="weui-input" type="text" placeholder="请输入地点">
+	        </div>
+        </div>
+	    <div class="weui-cell">
+	        <div class="weui-cell__hd"><label for="time-format" class="weui-label"><img src="../../image/time.png" style="width: 18px;height:18px">开始时间</label></div>
+	        <div class="weui-cell__bd">
+	          <input class="weui-input" id="beginDate" type="text" value="">
+	        </div>
+	    </div>
+	    <div class="weui-cell">
+	        <div class="weui-cell__hd"><label for="time-format" class="weui-label"><img src="../../image/time.png" style="width: 18px;height:18px">结束时间</label></div>
+	        <div class="weui-cell__bd">
+	          <input class="weui-input" id="endDate" type="text" value="">
+	        </div>
+	    </div>
+	    <div class="weui-btn-area">
+	        <a class="weui-btn weui-btn_primary" href="javascript:" id="showTooltips">提交</a>
+	    </div>  
+	</div>
+	<div id="time-container"></div>
+	<script src="../../js/demoCssJs/jquery-2.1.4.js"></script>
+	<script src="../../js/demoCssJs/fastclick.js"></script>
+	<script>
+	  $(function() {
+	    FastClick.attach(document.body);
+	  });
+	</script>
+	<script src="../../js/jquery-weui.js"></script>
+	<script type="text/javascript" src="../../js/vue.min.js"></script>
+    <script>     
+    var userId = ''; //当前人员ID
+	  $(function(){ 
+	  	userId = getUrlParam('userId');
+	  	var dateVal = new Date();
+	   	$("#beginDate").val(dateVal.getFullYear() + '年' + pad((dateVal.getMonth()+1),2) +'月' + pad(dateVal.getDate(),2) + '日 ' + pad(dateVal.getHours(),2) + '时' + pad(dateVal.getMinutes(),2) + '分');
+	   	$("#endDate").val(dateVal.getFullYear() + '年' + pad((dateVal.getMonth()+1),2) +'月' + pad(dateVal.getDate(),2) + '日 ' + pad(dateVal.getHours(),2) + '时' + pad(dateVal.getMinutes(),2) + '分');
+	  });
+	  function getUrlParam(name) {
+            var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)"); //构造一个含有目标参数的正则表达式对象
+            var r = window.location.search.substr(1).match(reg);  //匹配目标参数
+            if (r != null) return unescape(r[2]); return null; //返回参数值
+        }
+      //提交前判断
+      $("#showTooltips").click(function() {
+        var addr = $('#addr').val();
+        var content = $('#content').val();   
+        var beginDateVal = getDateFromVal($('#beginDate').val()); 
+        var endDateVal = getDateFromVal($('#endDate').val()); 
+        var beginTimeVal = getTimeFromVal($('#beginDate').val()); 
+        var endTimeVal = getTimeFromVal($('#endDate').val()); 
+        var noteCnt = 0;
+        var tempData = {
+			date: beginDateVal,
+			userId: userId
+		}
+		$.ajax({
+  			type : "post",
+  			url : "https://zypt.jiaobaowang.cn/WxService/getNoteHistoryByDateCnt",
+  			async : false,
+  			data : JSON.stringify(tempData),
+  			success : function(data) {
+  				if(data.RspCode == 0) {
+					noteCnt = data.RspData.Data;
+				}
+  			},
+  			error : function() {
+  				$.toast("读取日程失败", "cancel",  function() {
+			        	          console.log('close');
+			        	        });
+  			}
+  		});
+        if(!addr){
+        	$.toptip('请输入地点');
+        } 
+        else if (!content){
+        	$.toptip('请输入日程内容');
+        }
+        else if (addr.length > 10){
+        	$.toptip('地点长度不可超过10');
+        }
+        else if (content.length > 20){
+        	$.toptip('日程内容长度不可超过200');
+        }
+        else if (beginDateVal != endDateVal){
+        	$.toptip('开始日期和结束日期必须是同一天');
+        }
+        else if (beginTimeVal > endTimeVal){
+        	$.toptip('开始时间必须小于结束时间');
+        }
+        else if (noteCnt >= 5){
+        	$.toptip('每天最多可以插入5条日程');
+        }
+        else {
+        	$.confirm("您确定要提交吗?", "确认提交?", function() {
+				var tempData = {
+					noteNote: content,
+					noteAddr: addr,
+					userId: userId,
+					beginDate: beginDateVal,
+					endDate: endDateVal,
+					beginTime: beginTimeVal,
+					endTime: endTimeVal	
+				}
+				$.ajax(  
+				    {  
+				        type:'post',  
+				        url : 'https://zypt.jiaobaowang.cn/WxService/addNote',  
+				        dataType : 'json',  
+				        data: JSON.stringify(tempData),
+				        success  : function(data) {  
+				            if(data.RspCode == 0) {
+								$.toast("提交成功", function() {
+			        	          console.log('close');
+			        	        });
+			        	        //清空内容
+			        	        $('#addr').val('');
+        						$('#content').val('');
+			        	        var dateVal = new Date();
+	   							$("#beginDate").val(dateVal.getFullYear() + '年' + pad((dateVal.getMonth()+1),2) + '月' + pad(dateVal.getDate(),2) + '日 ' + pad(dateVal.getHours(),2) + '时' + pad(dateVal.getMinutes(),2) + '分');
+	   							$("#endDate").val(dateVal.getFullYear() + '年' + pad((dateVal.getMonth()+1),2) +'月' + pad(dateVal.getDate(),2) + '日 ' + pad(dateVal.getHours(),2) + '时' + pad(dateVal.getMinutes(),2) + '分');
+							} else {
+								$.toast("提交失败", "cancel",  function() {
+			        	          console.log('close');
+			        	        });
+							}
+				        },  
+				        error : function() {  
+				            $.toast("提交失败", "cancel",  function() {
+			        	          console.log('close');
+			        	        });
+				        }  
+				    }  
+				);  
+              }, function() {
+                //取消操作
+              });       	
+        }
+      });
+	    function getDateFromVal(oldDate){
+	      	return oldDate.substring(0, oldDate.indexOf("年")) + "-" 
+					+ oldDate.substring(oldDate.indexOf("年") + 1, oldDate.indexOf("月")) + "-"
+					+ oldDate.substring(oldDate.indexOf("月") + 1, oldDate.indexOf("日"));	
+	    }
+	    function getTimeFromVal(oldDate){
+	      	return oldDate.substring(oldDate.indexOf("日") + 2, oldDate.indexOf("时")) + ":"
+					+ oldDate.substring(oldDate.indexOf("时") + 1, oldDate.indexOf("分")) + ":"
+					+ "00";	
+	    }
+      //日期选择器
+      $("#beginDate").datetimePicker({
+        title: '请选择',
+        yearSplit: '年',
+        monthSplit: '月',
+        dateSplit: '日',
+        times: function () {
+          return [  // 自定义的时间
+            {
+              values: (function () {
+                var hours = [];
+                for (var i=0; i<24; i++) hours.push(i > 9 ? i : '0'+i);
+                return hours;
+              })()
+            },
+            {
+              divider: true,  // 这是一个分隔符
+              content: '时'
+            },
+            {
+              values: (function () {
+                var minutes = [];
+                for (var i=0; i<59; i++) minutes.push(i > 9 ? i : '0'+i);
+                return minutes;
+              })()
+            },
+            {
+              divider: true,  // 这是一个分隔符
+              content: '分'
+            }
+          ];
+        },
+        onChange: function (picker, values, displayValues) {
+          console.log(values);
+        }
+      });
+      $("#endDate").datetimePicker({
+          title: '请选择',
+          yearSplit: '年',
+          monthSplit: '月',
+          dateSplit: '日',
+          times: function () {
+            return [  // 自定义的时间
+              {
+                values: (function () {
+                  var hours = [];
+                  for (var i=0; i<24; i++) hours.push(i > 9 ? i : '0'+i);
+                  return hours;
+                })()
+              },
+              {
+                divider: true,  // 这是一个分隔符
+                content: '时'
+              },
+              {
+                values: (function () {
+                  var minutes = [];
+                  for (var i=0; i<59; i++) minutes.push(i > 9 ? i : '0'+i);
+                  return minutes;
+                })()
+              },
+              {
+                divider: true,  // 这是一个分隔符
+                content: '分'
+              }
+            ];
+          },
+          onChange: function (picker, values, displayValues) {
+            console.log(values);
+          }
+        });
+        function pad(num, n) {
+			var i = (num + "").length;
+			while(i++ < n) num = "0" + num;
+			return num;
+		}
+    </script>
+</body>
+</html>
