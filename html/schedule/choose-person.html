@@ -93,6 +93,11 @@
 		<script src="../../js/demoCssJs/jquery-weui.js"></script>
 
 		<script type="text/javascript">
+			$(function(){
+				sessionStorage.removeItem(consts.KEY_CHOOSE_PERSONS);
+				sessionStorage.removeItem(consts.KEY_CHOOSE_DEPARTS);
+				sessionStorage.removeItem(consts.KEY_CHOSE_MAP);
+			});
 			const choosePerson = {
 				template: '<person-list v-bind:depart_id="parseInt($route.params.id)" v-on:togglePerson="togglePersen"></person-list>',
 				methods: {
